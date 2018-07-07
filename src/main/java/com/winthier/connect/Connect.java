@@ -72,7 +72,6 @@ public final class Connect {
     public boolean send(String serverName, String channel, Object payload) {
         Client client = getClient(serverName);
         if (client == null) return false;
-        if (client.getStatus() != ConnectionStatus.CONNECTED) return false;
         Message message = new Message(channel, this.name, client.getName(), payload);
         client.send(message);
         return true;
@@ -80,7 +79,6 @@ public final class Connect {
 
     public void broadcast(String channel, Object payload, boolean all) {
         for (Client client: clients) {
-            if (client.getStatus() != ConnectionStatus.CONNECTED) continue;
             if (!all && name.equals(client.getName())) continue;
             Message message = new Message(channel, name, client.getName(), payload);
             client.send(message);
@@ -110,23 +108,33 @@ public final class Connect {
     }
 
     public void broadcastPlayerList(List<OnlinePlayer> players) {
-        PlayerList playerList = new PlayerList(PlayerList.Type.LIST, players);
-        broadcast("Connect", playerList.serialize());
+        for (Client client: clients) {
+            if (client.getStatus() == ConnectionStatus.CONNECTED) {
+                PlayerList playerList = new PlayerList(PlayerList.Type.LIST, players);
+                Message message = new Message("Connect", name, client.getName(), playerList.serialize());
+                client.send(message);
+            }
+        }
     }
 
     public void broadcastPlayerStatus(OnlinePlayer player, boolean online) {
-        PlayerList playerList = new PlayerList(online ? PlayerList.Type.JOIN : PlayerList.Type.QUIT, Arrays.asList(player));
-        broadcast("Connect", playerList.serialize());
+        for (Client client: clients) {
+            if (client.getStatus() == ConnectionStatus.CONNECTED) {
+                PlayerList playerList = new PlayerList(online ? PlayerList.Type.JOIN : PlayerList.Type.QUIT, Arrays.asList(player));
+                Message message = new Message("Connect", name, client.getName(), playerList.serialize());
+                client.send(message);
+            }
+        }
     }
 
     public void broadcastRemoteCommand(OnlinePlayer sender, String[] args) {
-        RemoteCommand remoteCommand = new RemoteCommand(sender, args);
-        broadcast("Connect", remoteCommand.serialize());
-    }
-
-    public void sendRemoteCommand(OnlinePlayer sender, String server, String[] args) {
-        RemoteCommand remoteCommand = new RemoteCommand(sender, args);
-        send(server, "Connect", remoteCommand.serialize());
+        for (Client client: clients) {
+            if (client.getStatus() == ConnectionStatus.CONNECTED) {
+                RemoteCommand remoteCommand = new RemoteCommand(sender, args);
+                Message message = new Message("Connect", name, client.getName(), remoteCommand.serialize());
+                client.send(message);
+            }
+        }
     }
 
     public List<OnlinePlayer> getOnlinePlayers() {
@@ -137,5 +145,18 @@ public final class Connect {
             }
         }
         return result;
+    }
+
+    public OnlinePlayer findOnlinePlayer(String pname) {
+        if (server != null) {
+            for (ServerConnection sc: server.getConnections()) {
+                for (OnlinePlayer onlinePlayer: sc.getOnlinePlayers()) {
+                    if (onlinePlayer.getName().equals(pname)) {
+                        return onlinePlayer;
+                    }
+                }
+            }
+        }
+        return null;
     }
 }
