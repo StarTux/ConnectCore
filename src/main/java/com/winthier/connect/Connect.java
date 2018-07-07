@@ -137,6 +137,11 @@ public final class Connect {
         }
     }
 
+    public void sendRemoteCommand(OnlinePlayer sender, String server, String[] args) {
+        RemoteCommand remoteCommand = new RemoteCommand(sender, args);
+        send(server, "Connect", remoteCommand.serialize());
+    }
+
     public List<OnlinePlayer> getOnlinePlayers() {
         List<OnlinePlayer> result = new ArrayList<>();
         if (server != null) {
