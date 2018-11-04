@@ -1,6 +1,7 @@
 package com.winthier.connect;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -56,7 +57,7 @@ public final class Server implements Runnable {
                 serverSocket = new ServerSocket();
                 serverSocket.setReuseAddress(true);
                 serverSocket.setSoTimeout(1000 * 10);
-                serverSocket.bind(new InetSocketAddress(port));
+                serverSocket.bind(new InetSocketAddress(InetAddress.getByName(null), port));
                 status = ConnectionStatus.CONNECTED;
             } catch (IOException ioe) {
                 status = ConnectionStatus.DISCONNECTED;
