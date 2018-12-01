@@ -24,6 +24,7 @@ public final class ServerConnection implements Runnable {
     private boolean shouldQuit = false;
     private ConnectionStatus status = ConnectionStatus.INIT;
     private final List<OnlinePlayer> onlinePlayers = Collections.synchronizedList(new ArrayList<>());
+    private int nullCount = 0;
 
     @Override
     public void run() {
@@ -66,8 +67,16 @@ public final class ServerConnection implements Runnable {
                 String line = in.readUTF();
                 Message message = Message.deserialize(line);
                 if (message == null) {
+                    nullCount += 1;
+                    System.out.println("ConnectCore: received null message");
+                    if (nullCount > 20) {
+                        try {
+                            Thread.sleep(1000L);
+                        } catch (InterruptedException ie) { }
+                    }
                     continue;
                 } else {
+                    nullCount = 0;
                     if (("Connect").equals(message.getChannel())) {
                         try {
                             @SuppressWarnings("unchecked") Map<String, Object> map = (Map<String, Object>)message.getPayload();
