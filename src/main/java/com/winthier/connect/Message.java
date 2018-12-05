@@ -1,13 +1,11 @@
 package com.winthier.connect;
 
-import java.util.HashMap;
-import java.util.Map;
+import com.google.gson.Gson;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.json.simple.JSONValue;
+import lombok.ToString;
 
-@Getter
-@RequiredArgsConstructor
+@Getter @RequiredArgsConstructor @ToString
 public final class Message {
     final String channel;
     final String from;
@@ -16,24 +14,11 @@ public final class Message {
     final transient long created = System.currentTimeMillis();
 
     String serialize() {
-        Map<String, Object> result = new HashMap<>();
-        result.put("channel", channel);
-        result.put("from", from);
-        result.put("to", to);
-        result.put("payload", payload);
-        return JSONValue.toJSONString(result);
+        return new Gson().toJson(this);
     }
 
     static Message deserialize(String serial) {
-        Object o = JSONValue.parse(serial);
-        if (!(o instanceof Map)) return null;
-        Map<?, ?> map = (Map<?, ?>)o;
-        String channel = map.get("channel").toString();
-        String from = map.get("from").toString();
-        String to = map.get("to").toString();
-        Object payload = map.get("payload");
-        if (from == null || to == null) return null;
-        return new Message(channel, from, to, payload);
+        return new Gson().fromJson(serial, Message.class);
     }
 
     boolean tooOld() {
