@@ -53,6 +53,10 @@ public final class Connect implements Runnable {
                     if (inp != null && inp.size() == 2) {
                         Message message = Message.deserialize(inp.get(1));
                         this.handler.handleMessage(message);
+                        if ("REMOTE".equals(message.channel) && message.payload instanceof String) {
+                            RemoteCommand rcmd = RemoteCommand.deserialize((String)message.payload);
+                            this.handler.handleRemoteCommand(rcmd.getSender(), message.from, rcmd.getArgs());
+                        }
                     }
                     long now = Instant.now().getEpochSecond();
                     if (now - lastRegister >= 10) {
