@@ -39,6 +39,8 @@ public final class Connect implements Runnable {
 
     public void stop() {
         this.shouldStop = true;
+        broadcast("DISCONNECT", null, false);
+        unregisterServerList();
     }
 
     @Override
@@ -80,8 +82,6 @@ public final class Connect implements Runnable {
                     e.printStackTrace();
                 }
             }
-            broadcast("DISCONNECT", null, false);
-            unregisterServerList();
         }
     }
 
