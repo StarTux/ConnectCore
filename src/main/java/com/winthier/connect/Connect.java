@@ -53,9 +53,21 @@ public final class Connect implements Runnable {
                     if (inp != null && inp.size() == 2) {
                         Message message = Message.deserialize(inp.get(1));
                         this.handler.handleMessage(message);
-                        if ("REMOTE".equals(message.channel) && message.payload instanceof String) {
-                            RemoteCommand rcmd = RemoteCommand.deserialize((String)message.payload);
-                            this.handler.handleRemoteCommand(rcmd.getSender(), message.from, rcmd.getArgs());
+                        switch (message.channel) {
+                        case "REMOTE":
+                            if (message.payload instanceof String) {
+                                RemoteCommand rcmd = RemoteCommand.deserialize((String)message.payload);
+                                this.handler.handleRemoteCommand(rcmd.getSender(), message.from, rcmd.getArgs());
+                            }
+                            break;
+                        case "CONNECT":
+                            this.handler.handleRemoteConnect(message.from);
+                            break;
+                        case "DISCONNECT":
+                            this.handler.handleRemoteDisconnect(message.from);
+                            break;
+                        default:
+                            break;
                         }
                     }
                     long now = Instant.now().getEpochSecond();
