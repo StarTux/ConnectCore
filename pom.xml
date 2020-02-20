@@ -1,23 +1,28 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project>
   <modelVersion>4.0.0</modelVersion>
+
   <groupId>com.winthier.connect</groupId>
   <artifactId>connect-core</artifactId>
-  <packaging>jar</packaging>
   <version>0.1-SNAPSHOT</version>
+
   <name>ConnectCore</name>
-  <url>http://cavetale.com</url>
+  <packaging>jar</packaging>
+  <url>https://github.com/StarTux/ConnectCore</url>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   <repositories>
+
     <!-- Cavetale Repo -->
     <repository>
       <id>cavetale</id>
       <url>https://cavetale.com/jenkins/plugin/repository/everything/</url>
     </repository>
+
   </repositories>
   <dependencies>
+
     <!-- Lombok -->
     <dependency>
       <groupId>org.projectlombok</groupId>
@@ -25,22 +30,28 @@
       <version>1.14.8</version>
       <scope>provided</scope>
     </dependency>
+
     <!-- Gson -->
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.8.5</version>
+      <scope>provided</scope>
     </dependency>
+
     <!-- Jedis -->
     <dependency>
       <groupId>redis.clients</groupId>
       <artifactId>jedis</artifactId>
       <version>3.0.0-SNAPSHOT</version>
-      <scope>provided</scope>
+      <scope>compile</scope>
     </dependency>
+
   </dependencies>
   <build>
+    <finalName>${project.name}</finalName>
     <plugins>
+
       <!-- Java 8 -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -56,6 +67,44 @@
           </compilerArgs>
         </configuration>
       </plugin>
+
+      <!-- Shade -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.0.0</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <artifactSet>
+                <includes>
+                  <include>redis.clients:jedis</include>
+                  <include>org.apache.commons:commons-pool2</include>
+                </includes>
+              </artifactSet>
+              <filters>
+                <filter>
+                  <artifact>redis.clients:jedis</artifact>
+                  <includes>
+                    <include>redis/clients/**</include>
+                  </includes>
+                </filter>
+                <filter>
+                  <artifact>org.apache.commons:commons-pool2</artifact>
+                  <includes>
+                    <include>org/apache/commons/**</include>
+                  </includes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+
     </plugins>
   </build>
 </project>
