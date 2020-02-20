@@ -27,46 +27,48 @@ public final class Connect implements Runnable {
 
     // --- Client
 
-    public Connect(String serverName, ConnectHandler handler) {
+    public Connect(final String serverName, final ConnectHandler handler) {
         if (serverName == null) throw new NullPointerException("serverName cannot be null");
         if (handler == null) throw new NullPointerException("handler cannot be null");
         this.serverName = serverName;
         this.handler = handler;
-        this.messageQueue = KEY_SERVER_QUEUE + "." + serverName;
-        this.jedisPool = new JedisPool("localhost");
+        messageQueue = KEY_SERVER_QUEUE + "." + serverName;
+        jedisPool = new JedisPool("localhost");
         instance = this;
     }
 
     public void stop() {
-        this.shouldStop = true;
+        shouldStop = true;
         broadcast("DISCONNECT", null, false);
         unregisterServerList();
     }
 
     @Override
     public void run() {
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        try (Jedis jedis = jedisPool.getResource()) {
             registerServerList();
             broadcast("CONNECT", null, false);
             long lastRegister = Instant.now().getEpochSecond();
             while (!shouldStop) {
                 try {
-                    List<String> inp = jedis.brpop(1, this.messageQueue);
+                    List<String> inp = jedis.brpop(1, messageQueue);
                     if (inp != null && inp.size() == 2) {
                         Message message = Message.deserialize(inp.get(1));
-                        this.handler.handleMessage(message);
+                        handler.handleMessage(message);
                         switch (message.channel) {
                         case "REMOTE":
                             if (message.payload instanceof String) {
-                                RemoteCommand rcmd = RemoteCommand.deserialize((String)message.payload);
-                                this.handler.handleRemoteCommand(rcmd.getSender(), message.from, rcmd.getArgs());
+                                RemoteCommand rcmd = RemoteCommand
+                                    .deserialize((String) message.payload);
+                                handler.handleRemoteCommand(rcmd.getSender(),
+                                                            message.from, rcmd.getArgs());
                             }
                             break;
                         case "CONNECT":
-                            this.handler.handleRemoteConnect(message.from);
+                            handler.handleRemoteConnect(message.from);
                             break;
                         case "DISCONNECT":
-                            this.handler.handleRemoteDisconnect(message.from);
+                            handler.handleRemoteDisconnect(message.from);
                             break;
                         default:
                             break;
@@ -86,14 +88,14 @@ public final class Connect implements Runnable {
     }
 
     void registerServerList() {
-        try (Jedis jedis = this.jedisPool.getResource()) {
-            jedis.hset(KEY_SERVER_MAP, this.serverName, "" + Instant.now().getEpochSecond());
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.hset(KEY_SERVER_MAP, serverName, "" + Instant.now().getEpochSecond());
         }
     }
 
     void unregisterServerList() {
-        try (Jedis jedis = this.jedisPool.getResource()) {
-            jedis.hdel(KEY_SERVER_MAP, this.serverName);
+        try (Jedis jedis = jedisPool.getResource()) {
+            jedis.hdel(KEY_SERVER_MAP, serverName);
         }
     }
 
@@ -101,7 +103,7 @@ public final class Connect implements Runnable {
 
     public List<String> listServers() {
         List<String> result = new ArrayList<>();
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        try (Jedis jedis = jedisPool.getResource()) {
             Map<String, String> allServers = jedis.hgetAll(KEY_SERVER_MAP);
             long now = Instant.now().getEpochSecond();
             for (Map.Entry<String, String> entry: allServers.entrySet()) {
@@ -118,9 +120,9 @@ public final class Connect implements Runnable {
     }
 
     public boolean send(String target, String channel, Object payload) {
-        final Message message = new Message(channel, this.serverName, target, payload);
+        final Message message = new Message(channel, serverName, target, payload);
         final String rediskey = KEY_SERVER_QUEUE + "." + target;
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        try (Jedis jedis = jedisPool.getResource()) {
             Transaction t = jedis.multi();
             t.lpush(rediskey, message.serialize());
             t.expire(rediskey, 10);
@@ -133,7 +135,7 @@ public final class Connect implements Runnable {
 
     private void broadcast(String channel, Object payload, boolean all) {
         for (String clientname: listServers()) {
-            if (!all && clientname.equals(this.serverName)) continue;
+            if (!all && clientname.equals(serverName)) continue;
             send(clientname, channel, payload);
         }
     }
@@ -164,7 +166,7 @@ public final class Connect implements Runnable {
      * Call whenever a player joins or quits.
      */
     public void updatePlayerList(Collection<OnlinePlayer> players) {
-        this.hasPlayerList = true;
+        hasPlayerList = true;
         if (players.isEmpty()) {
             removePlayerList();
             return;
@@ -174,8 +176,8 @@ public final class Connect implements Runnable {
             // Use names as values as they may theoretically not be unique.
             map.put(player.getUuid().toString(), player.getName());
         }
-        final String key = KEY_PLAYER_LIST + "." + this.serverName;
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        final String key = KEY_PLAYER_LIST + "." + serverName;
+        try (Jedis jedis = jedisPool.getResource()) {
             Transaction t = jedis.multi();
             t.del(key);
             t.hset(key, map);
@@ -185,27 +187,29 @@ public final class Connect implements Runnable {
     }
 
     private void keepPlayerListAlive() {
-        final String key = KEY_PLAYER_LIST + "." + this.serverName;
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        final String key = KEY_PLAYER_LIST + "." + serverName;
+        try (Jedis jedis = jedisPool.getResource()) {
             jedis.expire(key, 60);
         }
     }
 
     private void removePlayerList() {
-        final String key = KEY_PLAYER_LIST + "." + this.serverName;
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        final String key = KEY_PLAYER_LIST + "." + serverName;
+        try (Jedis jedis = jedisPool.getResource()) {
             jedis.del(key);
         }
     }
 
     public Map<String, List<OnlinePlayer>> listPlayers() {
         HashMap<String, List<OnlinePlayer>> result = new HashMap<>();
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        try (Jedis jedis = jedisPool.getResource()) {
             for (String other: listServers()) {
                 List<OnlinePlayer> playerList = new ArrayList<>();
                 result.put(other, playerList);
-                for (Map.Entry<String, String> playerEntry: jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
-                    playerList.add(new OnlinePlayer(UUID.fromString(playerEntry.getKey()), playerEntry.getValue()));
+                for (Map.Entry<String, String> playerEntry
+                         : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                    UUID uuid = UUID.fromString(playerEntry.getKey());
+                    playerList.add(new OnlinePlayer(uuid, playerEntry.getValue()));
                 }
             }
         }
@@ -214,10 +218,12 @@ public final class Connect implements Runnable {
 
     public List<OnlinePlayer> getOnlinePlayers() {
         List<OnlinePlayer> result = new ArrayList<>();
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        try (Jedis jedis = jedisPool.getResource()) {
             for (String other: listServers()) {
-                for (Map.Entry<String, String> playerEntry: jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
-                    result.add(new OnlinePlayer(UUID.fromString(playerEntry.getKey()), playerEntry.getValue()));
+                for (Map.Entry<String, String> playerEntry
+                         : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                    UUID uuid = UUID.fromString(playerEntry.getKey());
+                    result.add(new OnlinePlayer(uuid, playerEntry.getValue()));
                 }
             }
         }
@@ -225,10 +231,14 @@ public final class Connect implements Runnable {
     }
 
     public OnlinePlayer findOnlinePlayer(String name) {
-        try (Jedis jedis = this.jedisPool.getResource()) {
+        try (Jedis jedis = jedisPool.getResource()) {
             for (String other: listServers()) {
-                for (Map.Entry<String, String> playerEntry: jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
-                    if (playerEntry.getValue().equals(name)) return new OnlinePlayer(UUID.fromString(playerEntry.getKey()), playerEntry.getValue());
+                for (Map.Entry<String, String> playerEntry
+                         : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                    if (playerEntry.getValue().equals(name)) {
+                        UUID uuid = UUID.fromString(playerEntry.getKey());
+                        return new OnlinePlayer(uuid, playerEntry.getValue());
+                    }
                 }
             }
         }
