@@ -233,10 +233,23 @@ public final class Connect implements Runnable {
     public OnlinePlayer findOnlinePlayer(String name) {
         try (Jedis jedis = jedisPool.getResource()) {
             for (String other: listServers()) {
-                for (Map.Entry<String, String> playerEntry
-                         : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     if (playerEntry.getValue().equals(name)) {
                         UUID uuid = UUID.fromString(playerEntry.getKey());
+                        return new OnlinePlayer(uuid, playerEntry.getValue());
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public OnlinePlayer findOnlinePlayer(UUID uuid) {
+        String uuidString = uuid.toString();
+        try (Jedis jedis = jedisPool.getResource()) {
+            for (String other: listServers()) {
+                for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                    if (playerEntry.getKey().equals(uuidString)) {
                         return new OnlinePlayer(uuid, playerEntry.getValue());
                     }
                 }
