@@ -14,16 +14,16 @@ import redis.clients.jedis.Transaction;
 
 @Getter
 public final class Connect implements Runnable {
-    private static final String KEY_SERVER_MAP = "cavetale.connect.server_map";
-    private static final String KEY_SERVER_QUEUE = "cavetale.connect.server_queue";
-    private static final String KEY_PLAYER_LIST = "cavetale.connect.player_list";
-    private final String serverName;
-    private final ConnectHandler handler;
-    private final String messageQueue;
-    private final JedisPool jedisPool;
-    private volatile boolean shouldStop = false;
-    private volatile boolean hasPlayerList = false;
-    @Getter private static Connect instance = null;
+    protected static final String KEY_SERVER_MAP = "cavetale.connect.server_map";
+    protected static final String KEY_SERVER_QUEUE = "cavetale.connect.server_queue";
+    protected static final String KEY_PLAYER_LIST = "cavetale.connect.player_list";
+    protected final String serverName;
+    protected final ConnectHandler handler;
+    protected final String messageQueue;
+    protected final JedisPool jedisPool;
+    protected volatile boolean shouldStop = false;
+    protected volatile boolean hasPlayerList = false;
+    @Getter protected static Connect instance = null;
 
     // --- Client
 
