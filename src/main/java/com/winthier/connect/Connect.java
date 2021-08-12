@@ -33,7 +33,7 @@ public final class Connect implements Runnable {
         this.serverName = serverName;
         this.handler = handler;
         messageQueue = KEY_SERVER_QUEUE + "." + serverName;
-        jedisPool = new JedisPool("localhost");
+        jedisPool = new JedisPool();
         instance = this;
     }
 
@@ -125,7 +125,7 @@ public final class Connect implements Runnable {
         try (Jedis jedis = jedisPool.getResource()) {
             Transaction t = jedis.multi();
             t.lpush(rediskey, message.serialize());
-            t.expire(rediskey, 10);
+            t.expire(rediskey, 10L);
             t.exec();
         }
         return true;
@@ -181,7 +181,7 @@ public final class Connect implements Runnable {
             Transaction t = jedis.multi();
             t.del(key);
             t.hset(key, map);
-            t.expire(key, 60);
+            t.expire(key, 60L);
             t.exec();
         }
     }
@@ -189,7 +189,7 @@ public final class Connect implements Runnable {
     private void keepPlayerListAlive() {
         final String key = KEY_PLAYER_LIST + "." + serverName;
         try (Jedis jedis = jedisPool.getResource()) {
-            jedis.expire(key, 60);
+            jedis.expire(key, 60L);
         }
     }
 
