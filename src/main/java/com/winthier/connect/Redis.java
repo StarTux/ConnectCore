@@ -1,5 +1,6 @@
 package com.winthier.connect;
 
+import java.util.Set;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.Transaction;
 
@@ -50,6 +51,12 @@ public final class Redis {
             var result = jedis.brpop(timeout, key);
             if (result == null) return null;
             return result.getElement();
+        }
+    }
+
+    public static Set<String> keys(String pattern) {
+        try (Jedis jedis = getJedis()) {
+            return jedis.keys(pattern);
         }
     }
 }
