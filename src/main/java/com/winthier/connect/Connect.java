@@ -37,6 +37,16 @@ public final class Connect implements Runnable {
         instance = this;
     }
 
+    public Connect(final String serverName, final ConnectHandler handler, final String host, final int port, final String user, final String password) {
+        if (serverName == null) throw new NullPointerException("serverName cannot be null");
+        if (handler == null) throw new NullPointerException("handler cannot be null");
+        this.serverName = serverName;
+        this.handler = handler;
+        messageQueue = KEY_SERVER_QUEUE + "." + serverName;
+        jedisPool = new JedisPool(host, port, user, password);
+        instance = this;
+    }
+
     public void stop() {
         shouldStop = true;
         broadcast("DISCONNECT", null, false);
