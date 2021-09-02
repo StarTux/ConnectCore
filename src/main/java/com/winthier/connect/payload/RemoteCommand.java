@@ -1,12 +1,13 @@
-package com.winthier.connect;
+package com.winthier.connect.payload;
 
 import com.google.gson.Gson;
-import lombok.Value;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 
-@Value
+@Data @AllArgsConstructor
 public final class RemoteCommand {
-    private final OnlinePlayer sender;
-    private final String[] args;
+    private OnlinePlayer sender;
+    private String[] args;
 
     public String serialize() {
         return new Gson().toJson(this);

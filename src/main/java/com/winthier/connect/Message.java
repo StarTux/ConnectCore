@@ -7,11 +7,11 @@ import lombok.ToString;
 
 @Getter @RequiredArgsConstructor @ToString
 public final class Message {
-    final String channel;
-    final String from;
-    final String to;
-    final Object payload;
-    final transient long created = System.currentTimeMillis();
+    protected final String channel;
+    protected final String from;
+    protected final String to;
+    protected final String payload;
+    protected final long created = System.currentTimeMillis();
 
     String serialize() {
         return new Gson().toJson(this);
@@ -19,9 +19,5 @@ public final class Message {
 
     static Message deserialize(String serial) {
         return new Gson().fromJson(serial, Message.class);
-    }
-
-    boolean tooOld() {
-        return System.currentTimeMillis() - created > 1000 * 30;
     }
 }

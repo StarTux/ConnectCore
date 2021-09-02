@@ -1,5 +1,7 @@
 package com.winthier.connect;
 
+import com.winthier.connect.payload.OnlinePlayer;
+import com.winthier.connect.payload.RemoteCommand;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -67,12 +69,9 @@ public final class Connect implements Runnable {
                         handler.handleMessage(message);
                         switch (message.channel) {
                         case "REMOTE":
-                            if (message.payload instanceof String) {
-                                RemoteCommand rcmd = RemoteCommand
-                                    .deserialize((String) message.payload);
-                                handler.handleRemoteCommand(rcmd.getSender(),
-                                                            message.from, rcmd.getArgs());
-                            }
+                            RemoteCommand rcmd = RemoteCommand.deserialize(message.payload);
+                            handler.handleRemoteCommand(rcmd.getSender(),
+                                                        message.from, rcmd.getArgs());
                             break;
                         case "CONNECT":
                             handler.handleRemoteConnect(message.from);
@@ -129,7 +128,7 @@ public final class Connect implements Runnable {
         return result;
     }
 
-    public boolean send(String target, String channel, Object payload) {
+    public boolean send(String target, String channel, String payload) {
         final Message message = new Message(channel, serverName, target, payload);
         final String rediskey = KEY_SERVER_QUEUE + "." + target;
         try (Jedis jedis = jedisPool.getResource()) {
@@ -143,18 +142,18 @@ public final class Connect implements Runnable {
 
     // --- Broadcast
 
-    private void broadcast(String channel, Object payload, boolean all) {
+    private void broadcast(String channel, String payload, boolean all) {
         for (String clientname: listServers()) {
             if (!all && clientname.equals(serverName)) continue;
             send(clientname, channel, payload);
         }
     }
 
-    public void broadcast(String channel, Object payload) {
+    public void broadcast(String channel, String payload) {
         broadcast(channel, payload, false);
     }
 
-    public void broadcastAll(String channel, Object payload) {
+    public void broadcastAll(String channel, String payload) {
         broadcast(channel, payload, true);
     }
 
@@ -182,7 +181,7 @@ public final class Connect implements Runnable {
             return;
         }
         HashMap<String, String> map = new HashMap<>();
-        for (OnlinePlayer player: players) {
+        for (OnlinePlayer player : players) {
             // Use names as values as they may theoretically not be unique.
             map.put(player.getUuid().toString(), player.getName());
         }
@@ -213,11 +212,10 @@ public final class Connect implements Runnable {
     public Map<String, List<OnlinePlayer>> listPlayers() {
         HashMap<String, List<OnlinePlayer>> result = new HashMap<>();
         try (Jedis jedis = jedisPool.getResource()) {
-            for (String other: listServers()) {
+            for (String other : listServers()) {
                 List<OnlinePlayer> playerList = new ArrayList<>();
                 result.put(other, playerList);
-                for (Map.Entry<String, String> playerEntry
-                         : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     UUID uuid = UUID.fromString(playerEntry.getKey());
                     playerList.add(new OnlinePlayer(uuid, playerEntry.getValue()));
                 }
@@ -230,8 +228,7 @@ public final class Connect implements Runnable {
         List<OnlinePlayer> result = new ArrayList<>();
         try (Jedis jedis = jedisPool.getResource()) {
             for (String other: listServers()) {
-                for (Map.Entry<String, String> playerEntry
-                         : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     UUID uuid = UUID.fromString(playerEntry.getKey());
                     result.add(new OnlinePlayer(uuid, playerEntry.getValue()));
                 }
@@ -242,7 +239,7 @@ public final class Connect implements Runnable {
 
     public OnlinePlayer findOnlinePlayer(String name) {
         try (Jedis jedis = jedisPool.getResource()) {
-            for (String other: listServers()) {
+            for (String other : listServers()) {
                 for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     if (playerEntry.getValue().equals(name)) {
                         UUID uuid = UUID.fromString(playerEntry.getKey());
@@ -257,7 +254,7 @@ public final class Connect implements Runnable {
     public OnlinePlayer findOnlinePlayer(UUID uuid) {
         String uuidString = uuid.toString();
         try (Jedis jedis = jedisPool.getResource()) {
-            for (String other: listServers()) {
+            for (String other : listServers()) {
                 for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     if (playerEntry.getKey().equals(uuidString)) {
                         return new OnlinePlayer(uuid, playerEntry.getValue());
