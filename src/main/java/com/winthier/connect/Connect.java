@@ -264,4 +264,18 @@ public final class Connect implements Runnable {
         }
         return null;
     }
+
+    public String findServerOfPlayer(UUID uuid) {
+        String uuidString = uuid.toString();
+        try (Jedis jedis = jedisPool.getResource()) {
+            for (String other : listServers()) {
+                for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                    if (playerEntry.getKey().equals(uuidString)) {
+                        return other;
+                    }
+                }
+            }
+        }
+        return null;
+    }
 }
