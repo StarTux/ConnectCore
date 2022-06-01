@@ -217,7 +217,7 @@ public final class Connect implements Runnable {
                 result.put(other, playerList);
                 for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     UUID uuid = UUID.fromString(playerEntry.getKey());
-                    playerList.add(new OnlinePlayer(uuid, playerEntry.getValue()));
+                    playerList.add(new OnlinePlayer(uuid, playerEntry.getValue(), other));
                 }
             }
         }
@@ -230,7 +230,7 @@ public final class Connect implements Runnable {
             for (String other: listServers()) {
                 for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     UUID uuid = UUID.fromString(playerEntry.getKey());
-                    result.add(new OnlinePlayer(uuid, playerEntry.getValue()));
+                    result.add(new OnlinePlayer(uuid, playerEntry.getValue(), other));
                 }
             }
         }
@@ -243,7 +243,7 @@ public final class Connect implements Runnable {
                 for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     if (playerEntry.getValue().equals(name)) {
                         UUID uuid = UUID.fromString(playerEntry.getKey());
-                        return new OnlinePlayer(uuid, playerEntry.getValue());
+                        return new OnlinePlayer(uuid, playerEntry.getValue(), other);
                     }
                 }
             }
@@ -257,7 +257,7 @@ public final class Connect implements Runnable {
             for (String other : listServers()) {
                 for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
                     if (playerEntry.getKey().equals(uuidString)) {
-                        return new OnlinePlayer(uuid, playerEntry.getValue());
+                        return new OnlinePlayer(uuid, playerEntry.getValue(), other);
                     }
                 }
             }

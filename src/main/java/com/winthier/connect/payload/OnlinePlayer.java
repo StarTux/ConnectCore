@@ -8,4 +8,5 @@ import lombok.Data;
 public final class OnlinePlayer {
     private UUID uuid;
     private String name;
+    private String server;
 }
