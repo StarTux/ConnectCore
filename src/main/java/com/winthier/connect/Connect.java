@@ -26,6 +26,10 @@ public final class Connect implements Runnable {
     protected volatile boolean shouldStop = false;
     protected volatile boolean hasPlayerList = false;
     @Getter protected static Connect instance = null;
+    protected Map<String, List<OnlinePlayer>> cachedPlayerMap = Map.of();
+    protected List<OnlinePlayer> cachedPlayerList = List.of();
+    protected int cachedPlayerCount;
+    private long lastCachedPlayersUpdate;
 
     // --- Client
 
@@ -55,9 +59,24 @@ public final class Connect implements Runnable {
         unregisterServerList();
     }
 
+    private void updateCachedPlayers(Jedis jedis) {
+        int newCount = 0;
+        Map<String, List<OnlinePlayer>> newMap = listPlayers(jedis);
+        List<OnlinePlayer> newList = new ArrayList<>();
+        for (List<OnlinePlayer> list : newMap.values()) {
+            newList.addAll(list);
+            newCount += list.size();
+        }
+        this.cachedPlayerMap = newMap;
+        this.cachedPlayerList = newList;
+        this.cachedPlayerCount = newCount;
+        lastCachedPlayersUpdate = System.currentTimeMillis();
+    }
+
     @Override
     public void run() {
         try (Jedis jedis = jedisPool.getResource()) {
+            updateCachedPlayers(jedis);
             registerServerList();
             broadcast("CONNECT", null, false);
             long lastRegister = Instant.now().getEpochSecond();
@@ -74,10 +93,15 @@ public final class Connect implements Runnable {
                                                         message.from, rcmd.getArgs());
                             break;
                         case "CONNECT":
+                            updateCachedPlayers(jedis);
                             handler.handleRemoteConnect(message.from);
                             break;
                         case "DISCONNECT":
+                            updateCachedPlayers(jedis);
                             handler.handleRemoteDisconnect(message.from);
+                            break;
+                        case "PLAYER_LIST_UPDATE":
+                            updateCachedPlayers(jedis);
                             break;
                         default:
                             break;
@@ -88,6 +112,9 @@ public final class Connect implements Runnable {
                         lastRegister = now;
                         registerServerList();
                         if (hasPlayerList) keepPlayerListAlive();
+                    }
+                    if (System.currentTimeMillis() - lastCachedPlayersUpdate > 60_000L) {
+                        updateCachedPlayers(jedis);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -192,7 +219,9 @@ public final class Connect implements Runnable {
             t.hset(key, map);
             t.expire(key, 60L);
             t.exec();
+            updateCachedPlayers(jedis);
         }
+        broadcast("PLAYER_LIST_UPDATE", "");
     }
 
     private void keepPlayerListAlive() {
@@ -209,19 +238,23 @@ public final class Connect implements Runnable {
         }
     }
 
-    public Map<String, List<OnlinePlayer>> listPlayers() {
+    public Map<String, List<OnlinePlayer>> listPlayers(Jedis jedis) {
         HashMap<String, List<OnlinePlayer>> result = new HashMap<>();
-        try (Jedis jedis = jedisPool.getResource()) {
-            for (String other : listServers()) {
-                List<OnlinePlayer> playerList = new ArrayList<>();
-                result.put(other, playerList);
-                for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
-                    UUID uuid = UUID.fromString(playerEntry.getKey());
-                    playerList.add(new OnlinePlayer(uuid, playerEntry.getValue(), other));
-                }
+        for (String other : listServers()) {
+            List<OnlinePlayer> playerList = new ArrayList<>();
+            result.put(other, playerList);
+            for (Map.Entry<String, String> playerEntry : jedis.hgetAll(KEY_PLAYER_LIST + "." + other).entrySet()) {
+                UUID uuid = UUID.fromString(playerEntry.getKey());
+                playerList.add(new OnlinePlayer(uuid, playerEntry.getValue(), other));
             }
         }
         return result;
+    }
+
+    public Map<String, List<OnlinePlayer>> listPlayers() {
+        try (Jedis jedis = jedisPool.getResource()) {
+            return listPlayers(jedis);
+        }
     }
 
     public List<OnlinePlayer> getOnlinePlayers() {
