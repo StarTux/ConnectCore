@@ -28,6 +28,7 @@ public final class Connect implements Runnable {
     @Getter protected static Connect instance = null;
     protected Map<String, List<OnlinePlayer>> cachedPlayerMap = Map.of();
     protected List<OnlinePlayer> cachedPlayerList = List.of();
+    protected List<String> cachedServerList = List.of();
     protected int cachedPlayerCount;
     private long lastCachedPlayersUpdate;
 
@@ -71,6 +72,7 @@ public final class Connect implements Runnable {
         this.cachedPlayerList = newList;
         this.cachedPlayerCount = newCount;
         lastCachedPlayersUpdate = System.currentTimeMillis();
+        this.cachedServerList = listServers();
     }
 
     @Override
