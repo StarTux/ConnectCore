@@ -56,8 +56,8 @@ public final class Connect implements Runnable {
 
     public void stop() {
         shouldStop = true;
-        broadcast("DISCONNECT", null, false);
         unregisterServerList();
+        broadcast("DISCONNECT", null, false);
     }
 
     private void updateCachedPlayers(Jedis jedis) {
