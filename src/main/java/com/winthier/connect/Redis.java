@@ -50,7 +50,7 @@ public final class Redis {
         try (Jedis jedis = getJedis()) {
             var result = jedis.brpop(timeout, key);
             if (result == null) return null;
-            return result.getElement();
+            return result.getValue();
         }
     }
 

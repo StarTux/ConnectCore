@@ -2,6 +2,7 @@ package com.winthier.connect;
 
 import com.winthier.connect.payload.OnlinePlayer;
 import com.winthier.connect.payload.RemoteCommand;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,6 +42,7 @@ public final class Connect implements Runnable {
         this.handler = handler;
         messageQueue = KEY_SERVER_QUEUE + "." + serverName;
         jedisPool = new JedisPool();
+        jedisPool.setMaxWait(Duration.ofSeconds(1));
         instance = this;
     }
 
@@ -51,6 +53,7 @@ public final class Connect implements Runnable {
         this.handler = handler;
         messageQueue = KEY_SERVER_QUEUE + "." + serverName;
         jedisPool = new JedisPool(host, port, user, password);
+        jedisPool.setMaxWait(Duration.ofSeconds(1));
         instance = this;
     }
 
