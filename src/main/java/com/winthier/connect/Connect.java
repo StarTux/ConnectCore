@@ -31,7 +31,7 @@ public final class Connect implements Runnable {
     protected List<OnlinePlayer> cachedPlayerList = List.of();
     protected List<String> cachedServerList = List.of();
     protected int cachedPlayerCount;
-    private long lastCachedPlayersUpdate;
+    private long updateCachedPlayersCooldown;
 
     // --- Client
 
@@ -74,18 +74,21 @@ public final class Connect implements Runnable {
         this.cachedPlayerMap = newMap;
         this.cachedPlayerList = newList;
         this.cachedPlayerCount = newCount;
-        lastCachedPlayersUpdate = System.currentTimeMillis();
         this.cachedServerList = listServers();
+        updateCachedPlayersCooldown = System.currentTimeMillis() + 10_000;
     }
 
     @Override
     public void run() {
         try (Jedis jedis = jedisPool.getResource()) {
-            updateCachedPlayers(jedis);
             registerServerList();
             broadcast("CONNECT", null, false);
             long lastRegister = Instant.now().getEpochSecond();
             while (!shouldStop) {
+                final long now = System.currentTimeMillis();
+                if (updateCachedPlayersCooldown > now) {
+                    updateCachedPlayers(jedis);
+                }
                 try {
                     List<String> inp = jedis.brpop(1, messageQueue);
                     if (inp != null && inp.size() == 2) {
@@ -98,28 +101,25 @@ public final class Connect implements Runnable {
                                                         message.from, rcmd.getArgs());
                             break;
                         case "CONNECT":
-                            updateCachedPlayers(jedis);
+                            updateCachedPlayersCooldown = now + 1000L;
                             handler.handleRemoteConnect(message.from);
                             break;
                         case "DISCONNECT":
-                            updateCachedPlayers(jedis);
+                            updateCachedPlayersCooldown = now + 1000L;
                             handler.handleRemoteDisconnect(message.from);
                             break;
                         case "PLAYER_LIST_UPDATE":
-                            updateCachedPlayers(jedis);
+                            updateCachedPlayersCooldown = now + 1000L;
                             break;
                         default:
                             break;
                         }
                     }
-                    long now = Instant.now().getEpochSecond();
-                    if (now - lastRegister >= 10) {
-                        lastRegister = now;
+                    long nows = Instant.now().getEpochSecond();
+                    if (nows - lastRegister >= 10) {
+                        lastRegister = nows;
                         registerServerList();
                         if (hasPlayerList) keepPlayerListAlive();
-                    }
-                    if (System.currentTimeMillis() - lastCachedPlayersUpdate > 60_000L) {
-                        updateCachedPlayers(jedis);
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
