@@ -86,7 +86,7 @@ public final class Connect implements Runnable {
             long lastRegister = Instant.now().getEpochSecond();
             while (!shouldStop) {
                 final long now = System.currentTimeMillis();
-                if (updateCachedPlayersCooldown > now) {
+                if (updateCachedPlayersCooldown < now) {
                     updateCachedPlayers(jedis);
                 }
                 try {
@@ -101,15 +101,15 @@ public final class Connect implements Runnable {
                                                         message.from, rcmd.getArgs());
                             break;
                         case "CONNECT":
-                            updateCachedPlayersCooldown = now + 1000L;
+                            updateCachedPlayersCooldown = now + 100L;
                             handler.handleRemoteConnect(message.from);
                             break;
                         case "DISCONNECT":
-                            updateCachedPlayersCooldown = now + 1000L;
+                            updateCachedPlayersCooldown = now + 100L;
                             handler.handleRemoteDisconnect(message.from);
                             break;
                         case "PLAYER_LIST_UPDATE":
-                            updateCachedPlayersCooldown = now + 1000L;
+                            updateCachedPlayersCooldown = now + 100L;
                             break;
                         default:
                             break;
